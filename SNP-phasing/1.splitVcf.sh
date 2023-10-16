@@ -4,7 +4,7 @@ bcf=""
 threads=12
 
 # build list of bash commands
-bcftools query -l $bcf | awk -v bcf=$bcf '{print "bcftools view -s " $1 " -O b -o " D "/" $1 ".bcf " bcf}' > commands.txt
+bcftools query -l $bcf | awk -v bcf=$bcf '{print "bcftools view -s " $1 " -O b -o " $1 ".bcf " bcf}' > commands.txt
 
 # execute bash commands
 parallel -j $threads  < commands.txt
