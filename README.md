@@ -21,11 +21,11 @@ mummer
 SyRI  
 Paragraph  
 R
-    tidyverse  
-    ggplot2  
+- tidyverse  
+- ggplot2  
 Python3  
-    pandas  
-    seaborn  
-    matplotlib  
-    scipy  
-    statsmodels  
+- pandas  
+- seaborn  
+- matplotlib  
+- scipy  
+- statsmodels  
