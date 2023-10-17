@@ -3,9 +3,9 @@ Scripts used for the publication: XXXXX
 
 
 ## Tools/Programs
-bwa mem
-samtools
-bcftools
+bwa mem  
+samtools  
+bcftools  
 bioawk
 plink1.9
 pcangsd
