@@ -22,7 +22,8 @@ SyRI
 Paragraph  
 R
 - tidyverse  
-- ggplot2  
+- ggplot2
+
 Python3  
 - pandas  
 - seaborn  
