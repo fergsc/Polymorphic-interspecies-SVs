@@ -6,26 +6,26 @@ Scripts used for the publication: XXXXX
 bwa mem  
 samtools  
 bcftools  
-bioawk
-plink1.9
-pcangsd
-GNU parallel
-WhatsHap
-ShapeIT
-EDTA
-RepeatMasker
-BRAKER2
-Juicer
-3D-DNA
-mummer
-SyRI
-Paragraph
+bioawk  
+plink1.9  
+pcangsd  
+GNU parallel  
+WhatsHap  
+ShapeIT  
+EDTA  
+RepeatMasker  
+BRAKER2  
+Juicer  
+3D-DNA  
+mummer  
+SyRI  
+Paragraph  
 R
-    tidyverse
-    ggplot2
-Python3
-    pandas
-    seaborn
-    matplotlib
-    scipy
-    statsmodels
+    tidyverse  
+    ggplot2  
+Python3  
+    pandas  
+    seaborn  
+    matplotlib  
+    scipy  
+    statsmodels  
