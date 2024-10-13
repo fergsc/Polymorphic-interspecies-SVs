@@ -1,0 +1,142 @@
+# this is a colelction of scripts (bash and R) to calculate rho (estimated recombination rate)
+
+#!/bin/bash
+variants=$1
+ref=$2
+lens="${3:-5000000}"
+windowSize="${4:-1000}"
+
+script=$(readlink -f "$0")      # gets the path and name of this script
+scriptPath=$(dirname $script)   # get the path that scripts are in
+workDir=`pwd`                   # save the currecnt working directory
+
+##########
+# 0. get label
+[[ $(basename $variants .vcf) == $(basename $variants) ]] && label=$(basename $variants .bcf)
+[[ $(basename $variants .bcf) == $(basename $variants) ]] && label=$(basename $variants .vcf)
+chr=`echo $label | cut -f2 -d'-'`
+echo "0. $label"
+echo "   $chr"
+
+##########
+# 1. clean up old file (if exists) and create directory to store results
+echo "1. delete old directory (if exists) and create directory to store results"
+[ -d ${label} ] && rm -r ${label}
+mkdir ${label}
+cd ${label}
+
+##########
+# 2. create consensus fasta
+echo "2. create consensus fasta"
+bioawk -c fastx -v C=$chr '$name == C {print ">" $name "\n" $seq}' $ref > $(basename $ref)
+c=1
+for sss in `bcftools query -l $variants`
+do
+    cat $(basename $ref) | bcftools consensus --sample $sss --haplotype 1 $variants | bioawk -c fastx -v S="${sss}_1" '{print ">"S "\n" $seq}' >> ${label}.fasta
+    c=$((c+1))
+    cat $(basename $ref) | bcftools consensus --sample $sss --haplotype 2 $variants | bioawk -c fastx -v S="${sss}_2" '{print ">"S "\n" $seq}' >> ${label}.fasta
+    c=$((c+1))
+done
+
+##########
+# 3. split consensus fasta
+echo "3. split consensus fasta"
+
+chrLen=`bioawk -c fastx '{print length($seq)}' $(basename $ref)`
+bioawk -c fastx '{print $name}' ${label}.fasta > samples.lst
+
+f=1
+for((c = 0; c< $chrLen; c+=$lens))
+do
+    awk -v S=$c -v E=$((lens+c)) '{print $1, S, E}' samples.lst > $label~$f.bed
+    f=$((f+1))
+done
+
+for bed in `ls *.bed`
+do
+    num=`echo $(basename $bed .bed) | cut -f3 -d'~'`
+    seqtk subseq ${label}.fasta $bed | bioawk -c fastx '{split($name,a,":"); print ">" a[1] "\n" $seq}' > ${label}~${lens}-${num}.fasta
+done
+rm *.bed
+
+##########
+# 4. run LDJump on all segments
+echo "4. run LDJump on all segments"
+for fna in ${label}~${lens}-*.fasta
+do
+    sed -e "s|FFFFF|${fna}|g ; s|WWWWW|${windowSize}|g" ${scriptPath}/LDJump.XXX > LDJump.pbs
+    qsub LDJump.pbs
+done
+
+
+
+##########
+### LDJump.XXX
+##########
+
+conda activate LDJump
+
+fasta=""
+label=$(basename $fasta .fasta)
+
+mkdir ${label}
+cp $fasta ${label}
+cd ${label}
+
+Rscript /g/data/xe2/scott/scripts/LDJump/LDJump.R ${label}/$(basename $fasta) WWWWW $PBS_NCPUS
+
+rm $(basename $fasta)
+
+
+##########
+### LDJump.R
+##########
+
+#!/usr/bin/env Rscript
+args = commandArgs(trailingOnly=TRUE)
+
+##########
+# test if all parameters are given
+if(length(args)!=3)
+{
+  stop("Must supply consensus.fasta ; windowSize ; number of CPUs", call.=FALSE)
+}
+fastaFile = args[1]
+segLengthValue = as.integer(args[2])
+cpus = as.integer(args[3])
+
+if(!file.exists(fastaFile))
+{ 
+    stop(sprintf("%s doesn't exist", fastaFile), call.=FALSE)
+}
+
+print(sprintf("LDJump: %s (%i cpus)",fastaFile, cpus))
+
+##########
+# set up
+alphaValue=0.05
+# segLengthValue=1000
+pathPhiValue="/g/data/xe2/scott/gadi_modules/PhiPack/Phi"
+pathLDhatValue = "/g/data/xe2/scott/gadi_modules/test/LDhat"
+require(LDJump)
+
+##########
+# run
+print(sprintf("results = LDJump(%s, alpha = %s, segLength = %s, pathPhi = %s, pathLDhat = %s, format = fasta, refName = NULL, cores = %i, accept = TRUE)",fastaFile,alphaValue,segLengthValue,pathPhiValue,pathLDhatValue,cpus))
+results = LDJump(fastaFile, alpha = alphaValue, segLength = segLengthValue, pathPhi = pathPhiValue, pathLDhat = pathLDhatValue, format = "fasta", refName = NULL, cores = cpus, accept = TRUE)
+
+##########
+# get results
+write.csv(results[[1]], "step_function.csv", quote = FALSE, row.names = FALSE)
+write.csv(results[[2]], "constant_estimates.csv", quote = FALSE, row.names = FALSE)
+write.csv(results[[3]], "summary_statistics.csv", quote = FALSE, row.names = FALSE)
+df = data.frame(c("alpha", "sample_size", "sequence_length", "segment_length", "imputed_segments"),
+    c(results[[4]][1], results[[5]][1], results[[6]][1], results[[7]][1], results[[8]][1]))
+write.table(df, "stats.csv", row.names=FALSE, col.names=FALSE, quote = FALSE, sep=",")
+
+svg("step_function.svg")
+plot(results[[1]], xlab = "Segments", ylab = "Estimated Recombination Rate", main = "Estimated recombination map with LDJump")
+dev.off()
+svg("constant_estimates.svg")
+plot(results[[2]], xlab = "Segments", ylab = "Estimated Recombination Rate", main = "Estimated recombination map with LDJump")
+dev.off()
