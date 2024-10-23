@@ -1,5 +1,7 @@
 # Polymorphic-interspecies-SVs
-Scripts used for the publication: XXXXX
+Scripts used for the publication:
+- Exploring the role of polymorphic interspecies structural variants in reproductive isolation and adaptive divergence in Eucalyptus
+- https://doi.org/10.1093/gigascience/giae029
 
 
 ## Tools/Programs
